@@ -24,6 +24,9 @@ app.use('/api/auth', authRoutes);
 const quizRoutes = require('./routes/quiz');
 app.use('/api/quiz', quizRoutes);
 
+const roadmapRoutes = require('./routes/roadmap');
+app.use('/api/roadmap', roadmapRoutes);
+
 // Test route
 app.get('/', (req, res) => {
   res.send('PathAI backend is running!');
