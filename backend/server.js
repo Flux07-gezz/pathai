@@ -21,6 +21,9 @@ mongoose.connect(process.env.MONGO_URI, {
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
+const quizRoutes = require('./routes/quiz');
+app.use('/api/quiz', quizRoutes);
+
 // Test route
 app.get('/', (req, res) => {
   res.send('PathAI backend is running!');
