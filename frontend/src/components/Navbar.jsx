@@ -1,8 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { logout } from '../utils/storage';
+import { useLang } from '../LanguageContext';
 
 function Navbar() {
   const navigate = useNavigate();
+  const { lang, toggleLang, t } = useLang();
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -22,31 +25,41 @@ function Navbar() {
         <button 
           onClick={() => navigate('/dashboard')}
           className="text-gray-600 hover:text-indigo-600 font-medium transition-all">
-          Dashboard
+          {t('dashboard')}
         </button>
         <button 
           onClick={() => navigate('/quiz')}
           className="text-gray-600 hover:text-indigo-600 font-medium transition-all">
-          Quiz
+          {t('quiz')}
         </button>
         <button 
           onClick={() => navigate('/weakness')}
           className="text-gray-600 hover:text-indigo-600 font-medium transition-all">
-          Weakness
+          {t('weakness')}
         </button>
         <button 
           onClick={() => navigate('/roadmap')}
           className="text-gray-600 hover:text-indigo-600 font-medium transition-all">
-          Roadmap
+          {t('roadmap')}
         </button>
       </div>
 
-      {/* Logout */}
-      <button
-        onClick={handleLogout}
-        className="bg-red-50 text-red-500 px-4 py-2 rounded-xl font-medium hover:bg-red-100 transition-all">
-        Logout
-      </button>
+      {/* Right Side */}
+      <div className="flex items-center gap-3">
+        {/* Language Toggle */}
+        <button
+          onClick={toggleLang}
+          className="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl font-medium hover:bg-indigo-100 transition-all">
+          {lang === 'en' ? '🇮🇳 हिंदी' : '🇬🇧 English'}
+        </button>
+
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          className="bg-red-50 text-red-500 px-4 py-2 rounded-xl font-medium hover:bg-red-100 transition-all">
+          {t('logout')}
+        </button>
+      </div>
 
     </nav>
   );
