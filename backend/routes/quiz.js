@@ -4,6 +4,19 @@ const Question = require('../models/Question');
 const QuizScore = require('../models/QuizScore');
 const WeakTopic = require('../models/WeakTopic');
 
+// Get weak topics for a user
+router.get('/weak/:userId', async (req, res) => {
+  try {
+    const weakTopics = await WeakTopic.find({ 
+      userId: req.params.userId,
+      isWeak: true 
+    });
+    res.json(weakTopics);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get questions by subject
 router.get('/:subject', async (req, res) => {
   try {
@@ -54,17 +67,6 @@ router.post('/submit', async (req, res) => {
   }
 });
 
-// Get weak topics for a user
-router.get('/weak/:userId', async (req, res) => {
-  try {
-    const weakTopics = await WeakTopic.find({ 
-      userId: req.params.userId,
-      isWeak: true 
-    });
-    res.json(weakTopics);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
+
 
 module.exports = router;
