@@ -13,6 +13,12 @@ const userSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true
+  },
+  // Added field for Indian NCERT curriculum alignment
+  studentClass: { 
+    type: String, 
+    enum: ['Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10', 'Class 11', 'Class 12'],
+    default: null 
   }
 }, {
   timestamps: true

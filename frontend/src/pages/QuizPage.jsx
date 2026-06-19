@@ -1,184 +1,353 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import { getQuestions, submitQuiz } from '../utils/api';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { getUser } from '../utils/storage';
 
-function QuizPage() {
-  const [questions, setQuestions] = useState([]);
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [topicScores, setTopicScores] = useState({});
-  const [topicCounts, setTopicCounts] = useState({});
-  const [finished, setFinished] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [score, setScore] = useState(0);
-  const navigate = useNavigate();
+const navItems = [
+  { label: 'Dashboard', icon: '⊞', path: '/dashboard' },
+  { label: 'Quiz', icon: '📝', path: '/quiz' },
+  { label: 'Weakness', icon: '📊', path: '/weakness' },
+  { label: 'Roadmap', icon: '🤖', path: '/roadmap' },
+  { label: 'Settings', icon: '⚙️', path: '/settings' },
+];
+
+export default function QuizPage() {
   const location = useLocation();
-  const subject = new URLSearchParams(location.search).get('subject') || 'Math';
+  const navigate = useNavigate();
   const user = getUser();
+  
+  // ── STATE VARIABLES ──
+  const [questions, setQuestions] = useState(location.state?.questions || []);
+  const [topicName, setTopicName] = useState(location.state?.topic || '');
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
+  const [activePath, setActivePath] = useState('/quiz');
 
+  // Search & Loading States
+  const [topicInput, setTopicInput] = useState('');
+  const [loadingQuiz, setLoadingQuiz] = useState(false);
+  const [savingScore, setSavingScore] = useState(false);
+  
+  // Quiz History States
+  const [history, setHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // ── FETCH RECENTLY SOLVED HISTORY ──
   useEffect(() => {
-    const fetchQuestions = async () => {
-      try {
-        const difficulty = new URLSearchParams(location.search).get('difficulty') || 'easy';
-        const res = await getQuestions(subject, difficulty);
-        setQuestions(res.data);
-        setLoading(false);
-      } catch (err) {
-        console.error(err);
-        setLoading(false);
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    if (questions.length === 0) {
+      const fetchHistory = async () => {
+        try {
+          const rawToken = localStorage.getItem('token');
+          const cleanToken = rawToken.startsWith('"') && rawToken.endsWith('"')
+            ? JSON.parse(rawToken)
+            : rawToken;
+
+          const res = await axios.get('http://localhost:5000/api/quiz/history', {
+            headers: { Authorization: `Bearer ${cleanToken}` }
+          });
+          setHistory(res.data.quizzesTaken || []);
+        } catch (err) {
+          console.error("Failed to load quiz history profiles:", err);
+        } finally {
+          setLoadingHistory(false);
+        }
+      };
+      fetchHistory();
+    }
+  }, [questions, navigate, user]);
+
+  // ── GENERATE AI QUIZ DIRECTLY FROM THIS PAGE ──
+  const handleStartQuizDirectly = async (e) => {
+    e.preventDefault();
+    if (!topicInput.trim()) return;
+
+    setLoadingQuiz(true);
+    try {
+      const rawToken = localStorage.getItem('token');
+      const cleanToken = rawToken.startsWith('"') && rawToken.endsWith('"')
+        ? JSON.parse(rawToken)
+        : rawToken;
+
+      const response = await axios.post(
+        'http://localhost:5000/api/quiz/generate-dynamic',
+        { topic: topicInput },
+        { headers: { Authorization: `Bearer ${cleanToken}` } }
+      );
+
+      const questionsData = response?.data?.questions || response?.data;
+
+      if (Array.isArray(questionsData) && questionsData.length > 0) {
+        setQuestions(questionsData);
+        setTopicName(topicInput);
+        setCurrentQuestionIndex(0);
+        setSelectedAnswers({});
+        setIsSubmitted(false);
+        setScore(0);
+      } else {
+        alert("The AI service returned zero questions. Try another topic.");
       }
-    };
-    fetchQuestions();
-  }, [subject]);
-
-  const handleAnswer = (option) => {
-    setSelected(option);
-  };
-
-  const handleNext = async () => {
-    const q = questions[current];
-    if (!q) return null;
-    const isCorrect = selected === q.answer;
-
-    // Track topic scores
-    setTopicScores(prev => ({
-      ...prev,
-      [q.topic]: (prev[q.topic] || 0) + (isCorrect ? 1 : 0)
-    }));
-    setTopicCounts(prev => ({
-      ...prev,
-      [q.topic]: (prev[q.topic] || 0) + 1
-    }));
-
-    if (isCorrect) setScore(prev => prev + 1);
-
-    if (current + 1 < questions.length) {
-      setCurrent(prev => prev + 1);
-      setSelected(null);
-    } else {
-      // Calculate percentage per topic
-      const finalScores = {};
-      for (let topic in topicScores) {
-        const correct = topicScores[topic] + (isCorrect && q.topic === topic ? 1 : 0);
-        const total = topicCounts[topic] + (q.topic === topic ? 1 : 0);
-        finalScores[topic] = Math.round((correct / total) * 100);
-      }
-    // console.log('Submitting quiz with userId:', user.id);
-    // console.log('Topic scores:', finalScores);
-
-      // Submit to backend
-      try {
-        await submitQuiz({
-          userId: user.id,
-          subject,
-          topicScores: finalScores,
-          totalScore: Math.round(((score + (isCorrect ? 1 : 0)) / questions.length) * 100)
-        });
-      } catch (err) {
-        console.error(err);
-      }
-      setFinished(true);
+    } catch (error) {
+      alert("AI Generation Failed. Please ensure your backend is up and running.");
+    } finally {
+      setLoadingQuiz(false);
     }
   };
-    
 
-  if (loading) return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="flex items-center justify-center h-96">
-        <div className="text-indigo-600 text-xl font-medium">Loading questions...</div>
-      </div>
-    </div>
-  );
+  // ── ASSIGN ANSWERS ──
+  const handleSelectOption = (optionIndex) => {
+    if (isSubmitted) return;
+    setSelectedAnswers({ ...selectedAnswers, [currentQuestionIndex]: optionIndex });
+  };
 
-  if (finished) return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="max-w-2xl mx-auto px-6 py-10">
-        <div className="bg-white rounded-2xl p-8 shadow-sm text-center border border-gray-100">
-          <div className="text-6xl mb-4">🎉</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Quiz Completed!</h2>
-          <p className="text-gray-500 mb-6">You scored {score} out of {questions.length}</p>
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl p-4 mb-6">
-            <p className="text-3xl font-bold">{Math.round((score / questions.length) * 100)}%</p>
-            <p className="text-indigo-100">Total Score</p>
-          </div>
-          <div className="flex gap-4">
-            <button
-              onClick={() => navigate('/weakness')}
-              className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700 transition-all">
-              See Weakness Report
-            </button>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-all">
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  // ── SUBMIT QUIZ & LOG TO MONGODB ──
+  const handleSubmitQuiz = async () => {
+    let calculatedScore = 0;
+    questions.forEach((q, index) => {
+      if (selectedAnswers[index] === q.correctOptionIndex) {
+        calculatedScore += 1;
+      }
+    });
 
-  const q = questions[current];
-  if (!q) return null;
+    setScore(calculatedScore);
+    setIsSubmitted(true);
+    setSavingScore(true);
+
+    try {
+      const rawToken = localStorage.getItem('token');
+      const cleanToken = rawToken.startsWith('"') && rawToken.endsWith('"')
+        ? JSON.parse(rawToken)
+        : rawToken;
+
+      await axios.post('http://localhost:5000/api/quiz/save-score', {
+        topicName: topicName,
+        score: calculatedScore,
+        totalQuestions: questions.length
+      }, {
+        headers: { Authorization: `Bearer ${cleanToken}` }
+      });
+    } catch (err) {
+      console.error("Score saved locally, failed to update backend cluster metrics:", err);
+    } finally {
+      setSavingScore(false);
+    }
+  };
+
+  // ── BACK TO SEARCH WORKSPACE DASHBOARD CLEAR ──
+  const handleResetWorkspace = () => {
+    setQuestions([]);
+    setTopicName('');
+    setIsSubmitted(false);
+    setTopicInput('');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="max-w-2xl mx-auto px-6 py-10">
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0f0e2a', fontFamily: "'Inter', sans-serif" }}>
 
-        {/* Progress Bar */}
-        <div className="mb-6">
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span>Question {current + 1} of {questions.length}</span>
-            <span>{subject}</span>
+      {/* ── PERSISTENT SIDEBAR ── */}
+      <aside style={{
+        width: 220, background: '#13122e', display: 'flex', flexDirection: 'column',
+        padding: '28px 0', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 10
+      }}>
+        <div style={{ padding: '0 24px 32px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'linear-gradient(135deg, #6c63ff, #a78bfa)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 16, fontWeight: 800, color: '#fff'
+          }}>P</div>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 18 }}>PathAI</span>
+          <span style={{
+            fontSize: 9, background: '#6c63ff33', color: '#a78bfa',
+            padding: '2px 6px', borderRadius: 20, fontWeight: 600
+          }}>Beta</span>
+        </div>
+
+        <nav style={{ flex: 1 }}>
+          {navItems.map(item => {
+            const active = activePath === item.path;
+            return (
+              <div key={item.path}
+                onClick={() => { navigate(item.path); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '13px 24px', cursor: 'pointer', margin: '2px 12px',
+                  borderRadius: 12, transition: 'all 0.2s',
+                  background: active ? 'linear-gradient(135deg, #6c63ff, #8b5cf6)' : 'transparent',
+                  color: active ? '#fff' : '#8b8ab0',
+                  fontWeight: active ? 600 : 400, fontSize: 14,
+                }}>
+                <span style={{ fontSize: 16 }}>{item.icon}</span>
+                {item.label}
+              </div>
+            );
+          })}
+        </nav>
+
+        <div style={{
+          margin: '0 16px 16px', background: 'linear-gradient(135deg, #6c63ff22, #a78bfa22)',
+          border: '1px solid #6c63ff44', borderRadius: 16, padding: '16px',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: 28, marginBottom: 6 }}>🏆</div>
+          <p style={{ color: '#a78bfa', fontSize: 12, fontWeight: 600, margin: '0 0 4px' }}>Samsung Solve</p>
+          <p style={{ color: '#8b8ab0', fontSize: 11, margin: '0 0 10px' }}>for Tomorrow 2026</p>
+          <div style={{
+            background: 'linear-gradient(135deg, #6c63ff, #8b5cf6)',
+            color: '#fff', fontSize: 11, fontWeight: 600,
+            padding: '6px 12px', borderRadius: 8, cursor: 'pointer'
+          }}>Our Project</div>
+        </div>
+      </aside>
+
+      {/* ── MAIN CONTENT WORKSPACE AREA ── */}
+      <main style={{ marginLeft: 220, flex: 1, padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        
+        {/* ── TOP BAR HEADER ROW (Now spans the full width of the viewport to match Weakness Page) ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40, width: '100%' }}>
+          <div>
+            <h1 style={{ color: '#fff', fontSize: 22, fontWeight: 700, margin: 0 }}>AI Quiz Workspace 📝</h1>
+            <p style={{ color: '#8b8ab0', fontSize: 13, margin: '4px 0 0' }}>
+              {topicName ? `Active Practice Module: ${topicName}` : 'Formulate dynamic textbook curriculum assessments.'}
+            </p>
           </div>
-          <div className="bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full transition-all"
-              style={{ width: `${((current + 1) / questions.length) * 100}%` }}
-            />
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 14, color: '#a78bfa', background: '#6c63ff22', padding: '6px 14px', borderRadius: 20, fontWeight: 600 }}>
+              {user?.studentClass || 'Class 7'}
+            </span>
+            <div style={{
+              width: 40, height: 40, borderRadius: 12,
+              background: 'linear-gradient(135deg, #6c63ff, #a78bfa)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontWeight: 700, fontSize: 16
+            }}>
+              {user?.name?.[0]?.toUpperCase() || 'T'}
+            </div>
           </div>
         </div>
 
-        {/* Question Card */}
-        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-          <div className="bg-indigo-50 text-indigo-600 text-xs font-medium px-3 py-1 rounded-full inline-block mb-4">
-            {q.topic}
-          </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-6">{q.question}</h2>
+        {/* ── CENTRAL WIDGET WRAPPER (Keeps the search card and logs centered and proportional) ── */}
+        <div style={{ flex: 1, width: '100%', display: 'flex', justifyContent: 'center' }}>
+          
+          {questions.length === 0 ? (
+            /* CASE 1: EMPTY WORKSPACE */
+            <div style={{ maxWidth: '680px', width: '100%' }}>
+              {/* Search Trigger Panel */}
+              <div style={{ background: '#1e1d3f', borderRadius: '16px', padding: '24px', border: '1px solid #2d2b5a', marginBottom: '32px' }}>
+                <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 600, margin: '0 0 14px' }}>Launch a New Practice Quiz</h3>
+                <form onSubmit={handleStartQuizDirectly} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ background: '#13122e', border: '1.5px solid #2d2b5a', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '16px' }}>📖</span>
+                    <input
+                      type="text"
+                      value={topicInput}
+                      onChange={(e) => setTopicInput(e.target.value)}
+                      placeholder="Enter any NCERT topic (e.g., Photosynthesis, Trigonometry)..."
+                      disabled={loadingQuiz}
+                      style={{ background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '14px', flex: 1 }}
+                      required
+                    />
+                  </div>
+                  <button 
+                    type="submit" 
+                    disabled={loadingQuiz || !topicInput.trim()} 
+                    style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #6c63ff, #8b5cf6)', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 20px #6c63ff44' }}
+                  >
+                    {loadingQuiz ? 'Generating AI Exam...' : 'Generate AI Quiz →'}
+                  </button>
+                </form>
+              </div>
 
-          {/* Options */}
-          <div className="space-y-3">
-            {q.options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => handleAnswer(option)}
-                className={`w-full text-left px-5 py-4 rounded-xl border-2 font-medium transition-all ${
-                  selected === option
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-gray-200 hover:border-indigo-300 text-gray-700'
-                }`}>
-                {option}
-              </button>
-            ))}
-          </div>
+              {/* Recently Solved History Logs Grid Layout */}
+              <h3 style={{ color: '#fff', fontSize: '15px', fontWeight: 600, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Recently Solved Logs</h3>
+              {loadingHistory ? (
+                <p style={{ color: '#8b8ab0', fontSize: '13px' }}>Loading historical metrics...</p>
+              ) : history.length === 0 ? (
+                <div style={{ background: '#13122e', borderRadius: '12px', padding: '24px', textAlign: 'center', border: '1px solid #2d2b5a', color: '#8b8ab0', fontSize: '13px' }}>
+                  No questions solved yet. Start your first dynamic exam above!
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {history.map((item, idx) => {
+                    const pct = Math.round((item.score / item.totalQuestions) * 100);
+                    return (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1e1d3f', padding: '16px 20px', borderRadius: '14px', border: '1px solid #2d2b5a' }}>
+                        <div>
+                          <h4 style={{ color: '#fff', fontSize: '14px', fontWeight: 600, margin: '0 0 4px' }}>{item.topicName}</h4>
+                          <span style={{ color: '#8b8ab0', fontSize: '11px' }}>{new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ color: '#fff', fontWeight: 700, fontSize: '14px' }}>{item.score}/{item.totalQuestions}</span>
+                          <div style={{ fontSize: '11px', fontWeight: 600, marginTop: '2px', color: pct >= 70 ? '#51cf66' : '#ff6b6b' }}>
+                            {pct}% Accurate
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : !isSubmitted ? (
+            /* CASE 2: ACTIVE RUNNING EXAM ENGINE */
+            <div style={{ maxWidth: '680px', width: '100%', background: '#1e1d3f', borderRadius: '20px', padding: '32px', border: '1px solid #2d2b5a', alignSelf: 'flex-start' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a78bfa', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', marginBottom: '16px' }}>
+                <span>Active Core Question</span>
+                <span>{currentQuestionIndex + 1} of {questions.length}</span>
+              </div>
+              
+              <p style={{ fontSize: '17px', lineHeight: '1.6', fontWeight: 600, margin: '0 0 24px', color: '#fff' }}>{questions[currentQuestionIndex].questionText}</p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+                {questions[currentQuestionIndex].options.map((option, idx) => {
+                  const isSelected = selectedAnswers[currentQuestionIndex] === idx;
+                  return (
+                    <div key={idx} onClick={() => handleSelectOption(idx)} style={{ padding: '16px', background: isSelected ? '#6c63ff22' : '#13122e', border: isSelected ? '1.5px solid #6c63ff' : '1.5px solid #2d2b5a', borderRadius: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', transition: 'all 0.2s' }}>
+                      <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: isSelected ? '6px solid #6c63ff' : '2px solid #2d2b5a', background: isSelected ? '#fff' : 'transparent', boxSizing: 'border-box' }} />
+                      <span style={{ fontSize: '15px', color: isSelected ? '#fff' : '#8b8ab0', fontWeight: isSelected ? 600 : 400 }}>{option}</span>
+                    </div>
+                  );
+                })}
+              </div>
 
-          {/* Next Button */}
-          <button
-            onClick={handleNext}
-            disabled={!selected}
-            className="w-full mt-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-xl font-medium hover:opacity-90 transition-all disabled:opacity-40">
-            {current + 1 === questions.length ? 'Finish Quiz' : 'Next Question'}
-          </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <button onClick={() => setCurrentQuestionIndex(prev => Math.max(prev - 1, 0))} disabled={currentQuestionIndex === 0} style={{ padding: '12px 24px', background: '#2d2b5a', border: 'none', borderRadius: '12px', color: '#a78bfa', cursor: 'pointer', opacity: currentQuestionIndex === 0 ? 0.4 : 1 }}>← Previous</button>
+                {currentQuestionIndex === questions.length - 1 ? (
+                  <button onClick={handleSubmitQuiz} style={{ padding: '12px 28px', background: 'linear-gradient(135deg, #51cf66, #37b24d)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Submit Assessment</button>
+                ) : (
+                  <button onClick={() => setCurrentQuestionIndex(prev => prev + 1)} style={{ padding: '12px 24px', background: '#6c63ff', border: 'none', borderRadius: '12px', color: '#fff', cursor: 'pointer' }}>Next Question →</button>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* CASE 3: FINAL ASSESSMENT SUMMARY PANELS */
+            <div style={{ maxWidth: '680px', width: '100%', background: '#1e1d3f', borderRadius: '20px', padding: '40px', border: '1px solid #2d2b5a', textAlign: 'center', alignSelf: 'flex-start' }}>
+              <div style={{ fontSize: '56px', marginBottom: '16px' }}>{(score / questions.length) * 100 >= 70 ? '🎉' : '📚'}</div>
+              <h3 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>Assessment Finalized!</h3>
+              
+              <div style={{ display: 'inline-flex', flexDirection: 'column', background: '#13122e', padding: '24px 48px', borderRadius: '16px', border: '1px solid #2d2b5a', marginBottom: '32px', marginTop: '16px' }}>
+                <span style={{ fontSize: '12px', color: '#8b8ab0', textTransform: 'uppercase', fontWeight: 600 }}>Recorded Accuracy</span>
+                <span style={{ fontSize: '48px', color: (score / questions.length) * 100 >= 70 ? '#51cf66' : '#ff6b6b', fontWeight: 800, marginTop: 4 }}>{score} / {questions.length}</span>
+                <span style={{ fontSize: '14px', color: '#a78bfa', fontWeight: 600, marginTop: '4px' }}>{Math.round((score / questions.length) * 100)}% Performance</span>
+              </div>
+              
+              <div>
+                <button onClick={handleResetWorkspace} disabled={savingScore} style={{ padding: '14px 28px', background: 'linear-gradient(135deg, #6c63ff, #8b5cf6)', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '15px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 20px rgba(108,99,255,0.3)' }}>
+                  {savingScore ? 'Saving results...' : 'Complete & Exit Workspace'}
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
-
-      </div>
+      </main>
     </div>
   );
 }
-
-export default QuizPage;

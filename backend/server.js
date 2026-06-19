@@ -1,6 +1,9 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+// Add this with your other routes in server.js
+
+
 require('dotenv').config();
 
 // console.log('MONGO_URI:', process.env.MONGO_URI);
@@ -18,6 +21,9 @@ mongoose.connect(process.env.MONGO_URI, {
   .catch((err) => console.log('MongoDB connection error:', err.message));
 
 // Routes
+const dashboardRoutes = require('./routes/dashboard');
+app.use('/api/dashboard', dashboardRoutes);
+
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 

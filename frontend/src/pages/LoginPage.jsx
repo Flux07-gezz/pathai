@@ -20,15 +20,36 @@ function LoginPage() {
     try {
       if (isLogin) {
         const res = await login({ email, password });
-        saveUser(res.data.user, res.data.token);
-        navigate('/dashboard');
+        
+        // Dynamic fallback: Extracts data correctly whether it's wrapped in res.data or directly in res
+        const activeToken = res?.data?.token || res?.token;
+        const activeUser = res?.data?.user || res?.user;
+
+        if (!activeToken || !activeUser) {
+          setError('Authentication payload structural mismatch. Missing user or token properties.');
+          setLoading(false);
+          return;
+        }
+
+        // Commit both the clean user data object and the token string to storage utilities
+        saveUser(activeUser, activeToken);
+        
+        console.log("Token securely saved into client memory:", activeToken);
+
+        // Direct routing based on active profile onboarding configuration status
+        if (!activeUser.studentClass) {
+          navigate('/onboarding');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         await register({ name, email, password });
         setIsLogin(true);
         setError('Registered successfully! Please login.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong');
+      console.error("Login submission failure logs:", err);
+      setError(err.response?.data?.message || 'Authentication failed. Please verify your connection or credentials.');
     } finally {
       setLoading(false);
     }
@@ -38,15 +59,16 @@ function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
         
-        {/* Logo */}
+        {/* Logo Banner */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-indigo-600">PathAI</h1>
           <p className="text-gray-500 mt-2">Your personal study companion</p>
         </div>
 
-        {/* Toggle Login/Register */}
+        {/* Toggle Login/Register Interfaces */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
           <button
+            type="button"
             onClick={() => setIsLogin(true)}
             className={`flex-1 py-2 rounded-lg font-medium transition-all ${
               isLogin ? 'bg-white shadow text-indigo-600' : 'text-gray-500'
@@ -55,6 +77,7 @@ function LoginPage() {
             Login
           </button>
           <button
+            type="button"
             onClick={() => setIsLogin(false)}
             className={`flex-1 py-2 rounded-lg font-medium transition-all ${
               !isLogin ? 'bg-white shadow text-indigo-600' : 'text-gray-500'
@@ -64,7 +87,7 @@ function LoginPage() {
           </button>
         </div>
 
-        {/* Error Message */}
+        {/* Error Notification Alert Block */}
         {error && (
           <div className={`p-3 rounded-lg mb-4 text-sm ${
             error.includes('successfully') 
@@ -75,7 +98,7 @@ function LoginPage() {
           </div>
         )}
 
-        {/* Form */}
+        {/* Submission Form Context */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
