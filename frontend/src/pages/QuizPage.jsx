@@ -21,7 +21,8 @@ function QuizPage() {
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const res = await getQuestions(subject);
+        const difficulty = new URLSearchParams(location.search).get('difficulty') || 'easy';
+        const res = await getQuestions(subject, difficulty);
         setQuestions(res.data);
         setLoading(false);
       } catch (err) {
@@ -38,6 +39,7 @@ function QuizPage() {
 
   const handleNext = async () => {
     const q = questions[current];
+    if (!q) return null;
     const isCorrect = selected === q.answer;
 
     // Track topic scores
@@ -121,6 +123,7 @@ function QuizPage() {
   );
 
   const q = questions[current];
+  if (!q) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">

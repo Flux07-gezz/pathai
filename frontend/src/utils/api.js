@@ -18,7 +18,7 @@ export const register = (data) => API.post('/auth/register', data);
 export const login = (data) => API.post('/auth/login', data);
 
 // Quiz routes
-export const getQuestions = (subject) => API.get(`/quiz/${subject}`);
+export const getQuestions = (subject, difficulty) => API.get(`/quiz/${subject}/${difficulty}`);
 export const submitQuiz = (data) => API.post('/quiz/submit', data);
 export const getWeakTopics = (userId) => API.get(`/quiz/weak/${userId}`);
 

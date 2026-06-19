@@ -25,6 +25,10 @@ const questionSchema = new mongoose.Schema({
     type: String,
     enum: ['easy', 'medium', 'hard'],
     default: 'easy'
+  },
+  aiGenerated: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
