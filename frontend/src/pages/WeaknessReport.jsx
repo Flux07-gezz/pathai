@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
 import { getWeakTopics } from '../utils/api';
 import { getUser } from '../utils/storage';
 
@@ -14,110 +13,126 @@ function WeaknessReport() {
     const fetchWeaknessMetrics = async () => {
       try {
         setLoading(true);
-        // Requesting your analytical report records through the local server port bridge
         const res = await getWeakTopics(user?.id || user?._id);
-        
-        if (res && res.data) {
-          setReports(res.data);
-        }
+        if (res && res.data) setReports(res.data);
       } catch (err) {
-        console.error("Failed to parse historical syllabus metrics:", err);
+        console.error("Failed to parse historical metrics:", err);
       } finally {
         setLoading(false);
       }
     };
-
-    if (user?.id || user?._id) {
-      fetchWeaknessMetrics();
-    } else {
-      setLoading(false);
-    }
+    if (user?.id || user?._id) fetchWeaknessMetrics();
   }, []);
-
-  // 1. LOADING RENDER GUARD (Prevents premature compilation layout crashes)
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="flex flex-col items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-          <div className="text-indigo-600 text-xl font-medium">Compiling focus areas report analytics...</div>
-        </div>
-      </div>
-    );
-  }
 
   const subjects = Object.keys(reports || {});
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="max-w-4xl mx-auto px-6 py-10">
-        
-        {/* Header Block */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Weakness Analysis</h1>
-            <p className="text-gray-500 mt-1">
-              Target focus topics pinpointed by AI based on your completed {user?.educationBoard || 'CBSE'} quiz evaluations.
-            </p>
+    <div className="flex min-h-screen bg-[#0f0c1b] text-gray-100 font-sans antialiased">
+      
+      {/* LEFT SIDEBAR NAVIGATION PANELS */}
+      <aside className="w-64 border-r border-[#2e2a56] bg-[#0f0c1b] p-6 flex flex-col justify-between shrink-0">
+        <div>
+          <div className="flex items-center gap-2 mb-8 px-2">
+            <div className="h-7 w-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">P</div>
+            <span className="font-bold text-lg tracking-tight text-white">PathAI <span className="text-[10px] bg-indigo-600/30 text-indigo-300 px-1.5 py-0.5 rounded ml-1 font-normal uppercase">Beta</span></span>
           </div>
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-all"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-
-        {/* 2. EMPTY METRICS SAFEGUARD BLOCK */}
-        {subjects.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
-            <div className="text-5xl mb-4">🎯</div>
-            <h2 className="text-xl font-bold text-gray-800">Your profile report is clean!</h2>
-            <p className="text-gray-500 max-w-md mx-auto mt-2 mb-6">
-              Complete more multiple choice chapters quizzes to unlock deep syllabus weakness performance trackers here.
-            </p>
-            <button 
-              onClick={() => navigate('/dashboard')}
-              className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-medium text-sm hover:bg-indigo-700 transition-all"
-            >
-              Start Practice Quiz Now
+          
+          <nav className="space-y-1.5">
+            <button onClick={() => navigate('/dashboard')} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-[#1d1b36]/40 hover:text-gray-200 transition-all">
+              <span>📊</span> Dashboard
             </button>
-          </div>
-        ) : (
-          /* 3. PROTECTED RENDERING MAP ENGINE LOOP */
-          <div className="space-y-6">
-            {subjects.map((subjectName) => {
-              const topicList = reports[subjectName] || [];
-              if (topicList.length === 0) return null;
+            <button onClick={() => navigate('/quiz')} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-[#1d1b36]/40 hover:text-gray-200 transition-all">
+              <span>📝</span> Quiz
+            </button>
+            <button onClick={() => navigate('/weakness')} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-900/20 transition-all">
+              <span>⚠️</span> Weakness
+            </button>
+            <button onClick={() => navigate('/roadmap')} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-[#1d1b36]/40 hover:text-gray-200 transition-all">
+              <span>🗺️</span> Roadmap
+            </button>
+            <button onClick={() => navigate('/settings')} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-[#1d1b36]/40 hover:text-gray-200 transition-all">
+              <span>⚙️</span> Settings
+            </button>
+          </nav>
+        </div>
+      </aside>
 
-              return (
-                <div key={subjectName} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                  <h2 className="text-xl font-bold text-gray-800 uppercase tracking-wide border-b border-gray-100 pb-3 mb-4 flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-full bg-red-500"></span>
-                    {subjectName} Focus Fields
-                  </h2>
-                  
-                  <div className="flex flex-wrap gap-3">
-                    {topicList.map((topicItem, idx) => (
-                      <div 
-                        key={idx} 
-                        onClick={() => navigate(`/quiz?subject=${subjectName}&topic=${topicItem}`)}
-                        className="bg-red-50 text-red-700 border border-red-100 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer hover:bg-red-100 transition-all flex items-center gap-2"
-                      >
-                        <span>⚠️</span>
-                        <span>{topicItem}</span>
-                      </div>
-                    ))}
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 min-w-0 flex flex-col">
+        
+        {/* TOP PROFILE HEADER BLOCK */}
+        <header className="h-20 border-b border-[#2e2a56] px-8 flex items-center justify-between bg-[#0f0c1b]/80 backdrop-blur-md sticky top-0 z-10">
+          <div>
+            <h1 className="text-xl font-bold text-gray-100 tracking-tight">Weakness Performance Report</h1>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="bg-[#1d1b36] border border-[#2e2a56] rounded-xl px-3 py-1.5 text-xs text-purple-300 font-medium">
+              🇮🇳 EN / हिंदी
+            </div>
+            <div className="h-9 w-9 rounded-xl bg-[#1d1b36] border border-[#2e2a56] flex items-center justify-center text-sm">🔔</div>
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-sm">T</div>
+          </div>
+        </header>
+
+        {/* DETAILS WRAPPER CONTAINER */}
+        <div className="flex-1 p-8 max-w-5xl w-full mx-auto space-y-6">
+          
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-96">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500 mb-4"></div>
+              <div className="text-purple-400 text-sm font-medium">Analyzing diagnostic data frameworks...</div>
+            </div>
+          ) : subjects.length === 0 ? (
+            <div className="bg-[#1d1b36]/60 border border-[#2e2a56] rounded-2xl p-16 text-center backdrop-blur-md max-w-2xl mx-auto shadow-xl">
+              <div className="text-5xl mb-4">🎯</div>
+              <h2 className="text-lg font-bold text-gray-100">Your profile tracking metrics are clean!</h2>
+              <p className="text-gray-400 text-sm mt-2 mb-6">Complete more adaptive board assessments to extract focal points here.</p>
+              <button onClick={() => navigate('/dashboard')} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow-md">
+                Start Practice Quiz Now
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {subjects.map((subjectName) => {
+                const topicList = reports[subjectName] || [];
+                if (topicList.length === 0) return null;
+
+                return (
+                  /* CONTAINER WITH SAME SHARP GLASS EFFECT AS RECENT QUIZZES GRID */
+                  <div key={subjectName} className="bg-[#1d1b36]/60 border border-[#2e2a56] rounded-2xl p-6 backdrop-blur-md shadow-lg">
+                    <h2 className="text-sm font-semibold tracking-wider text-purple-300 uppercase mb-4 flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+                      {subjectName} Chapters Needing Focus
+                    </h2>
+                    
+                    {/* BUTTON LIST GRID PATTERNS WITH EMBEDDED DYNAMIC RE-ROUTE */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {topicList.map((topicItem, idx) => (
+                        <div 
+                          key={idx} 
+                          onClick={() => navigate(`/quiz?subject=${subjectName}&topic=${topicItem}`)}
+                          className="flex items-center justify-between px-5 py-4 rounded-xl border border-[#2e2a56] bg-[#131126]/60 hover:bg-[#1d1b36]/40 hover:border-indigo-500/50 cursor-pointer transition-all duration-150 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-amber-500 text-sm">⚠️</span>
+                            <span className="text-sm font-medium text-gray-200 group-hover:text-white">{topicItem}</span>
+                          </div>
+                          
+                          {/* STATUS BADGES LINKED TO CORRECTION FILTERS */}
+                          <span className="text-[10px] bg-red-950/50 border border-red-900/60 text-red-400 font-semibold px-2.5 py-1 rounded-md tracking-wider uppercase group-hover:bg-red-900/30 transition-all">
+                            Review Concept →
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-      </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
