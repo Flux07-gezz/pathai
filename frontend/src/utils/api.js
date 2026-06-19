@@ -1,26 +1,33 @@
 import axios from 'axios';
 
+// const API = axios.create({
+//   baseURL: 'http://localhost:5000/api'
+// });
+
+
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api'
+  // Bypasses local domain name translation blockades completely
+  baseURL: 'http://127.0.0.1:5000/api'
 });
 
-// Automatically add token to every request
-API.interceptors.request.use((req) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    req.headers.Authorization = `Bearer ${token}`;
-  }
-  return req;
-});
+// === AUTHENTICATION API EXPORTS ===
+export const login = (credentials) => API.post('/auth/login', credentials);
+export const register = (userData) => API.post('/auth/register', userData);
 
-// Auth routes
-export const register = (data) => API.post('/auth/register', data);
-export const login = (data) => API.post('/auth/login', data);
+// === QUIZ ENGINE API EXPORTS ===
+// Passes filters to backend matching class level and board setups
+export const getQuestions = (userId, subject, topic) => 
+  API.get('/quiz/generate-questions', { params: { userId, subject, topic } });
 
-// Quiz routes
-export const getQuestions = (subject) => API.get(`/quiz/${subject}`);
-export const submitQuiz = (data) => API.post('/quiz/submit', data);
-export const getWeakTopics = (userId) => API.get(`/quiz/weak/${userId}`);
+// Main score tracking submission endpoint 
+export const submitQuiz = (quizResultData) => API.post('/quiz/submit', quizResultData);
 
-// Roadmap routes
-export const getRoadmap = (userId) => API.get(`/roadmap/${userId}`);
+// Logs individual historical questions solved by users to prevent duplicate repeats
+export const logSolvedQuestions = (userId, subject, questionsData) => 
+  API.post('/quiz/submit-results', { userId, subject, questionsData });
+
+// Fetches the saved weak topics for the dashboard analytics report
+export const getWeakTopics = (userId) => API.get(`/quiz/weak-topics/${userId}`); // ◄--- ADD THIS EXP0RT
+
+// === ROADMAP ENGINE API EXPORTS ===
+export const getRoadmap = (userId) => API.post('/roadmap/generate', { userId });

@@ -34,6 +34,7 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Force the server to listen specifically on the local IPv4 interface
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`Server running explicitly on http://127.0.0.1:${PORT}`);
 });

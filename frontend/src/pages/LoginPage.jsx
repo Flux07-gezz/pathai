@@ -4,6 +4,8 @@ import { login, register } from '../utils/api';
 import { saveUser } from '../utils/storage';
 
 function LoginPage() {
+  const [studentLevel, setStudentLevel] = useState('Class 10');
+  const [educationBoard, setEducationBoard] = useState('CBSE');
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -23,7 +25,8 @@ function LoginPage() {
         saveUser(res.data.user, res.data.token);
         navigate('/dashboard');
       } else {
-        await register({ name, email, password });
+        // Enforcing structured profile updates to handle dynamic board curricula paths
+        await register({ name, email, password, studentLevel, educationBoard });
         setIsLogin(true);
         setError('Registered successfully! Please login.');
       }
@@ -47,7 +50,8 @@ function LoginPage() {
         {/* Toggle Login/Register */}
         <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
           <button
-            onClick={() => setIsLogin(true)}
+            type="button"
+            onClick={() => { setIsLogin(true); setError(''); }}
             className={`flex-1 py-2 rounded-lg font-medium transition-all ${
               isLogin ? 'bg-white shadow text-indigo-600' : 'text-gray-500'
             }`}
@@ -55,7 +59,8 @@ function LoginPage() {
             Login
           </button>
           <button
-            onClick={() => setIsLogin(false)}
+            type="button"
+            onClick={() => { setIsLogin(false); setError(''); }}
             className={`flex-1 py-2 rounded-lg font-medium transition-all ${
               !isLogin ? 'bg-white shadow text-indigo-600' : 'text-gray-500'
             }`}
@@ -64,7 +69,7 @@ function LoginPage() {
           </button>
         </div>
 
-        {/* Error Message */}
+        {/* Error/Success Status Banner Notification */}
         {error && (
           <div className={`p-3 rounded-lg mb-4 text-sm ${
             error.includes('successfully') 
@@ -75,7 +80,7 @@ function LoginPage() {
           </div>
         )}
 
-        {/* Form */}
+        {/* Form Container */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
@@ -115,10 +120,41 @@ function LoginPage() {
             />
           </div>
 
+          {/* DYNAMIC REGISTRATION SELECTION OPTIONS FORM FIELDS */}
+          {!isLogin && (
+            <>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Education Board</label>
+                <select
+                  value={educationBoard}
+                  onChange={(e) => setEducationBoard(e.target.value)}
+                  className="w-full mt-1 px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                >
+                  <option value="CBSE">CBSE (NCERT Curriculum)</option>
+                  <option value="ICSE">ICSE / ISC Board</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700">Class / Grade Level</label>
+                <select
+                  value={studentLevel}
+                  onChange={(e) => setStudentLevel(e.target.value)}
+                  className="w-full mt-1 px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                >
+                  <option value="Class 9">Class 9</option>
+                  <option value="Class 10">Class 10</option>
+                  <option value="Class 11">Class 11</option>
+                  <option value="Class 12">Class 12</option>
+                </select>
+              </div>
+            </>
+          )}
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700 transition-all disabled:opacity-50"
+            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700 transition-all disabled:opacity-50 mt-6"
           >
             {loading ? 'Please wait...' : isLogin ? 'Login' : 'Register'}
           </button>

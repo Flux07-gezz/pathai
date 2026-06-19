@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const WeakTopic = require('../models/WeakTopic');
+const SolvedQuestion = require('../models/SolvedQuestion');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
