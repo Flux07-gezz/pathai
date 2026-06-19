@@ -32,32 +32,36 @@ Follow these steps to spin up the development environment locally:
 ```bash
 git clone [https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git)
 cd PathAI
-
+```
 ### 2. Configure Backend Server Environment
 Navigate to your backend directory and create a `.env` file:
 ```bash
 cd backend
+```
 
 Create a .env file with the following variables:
-
-Code snippet
+```bash
 PORT=5000
 MONGODB_URI=your_mongodb_atlas_connection_string
 JWT_SECRET=your_jwt_encryption_token_key
 GEMINI_API_KEY=your_google_gemini_api_key
-Install dependencies and run the server terminal:
+```
 
+Install dependencies and run the server terminal:
+```bash
 Bash
 npm install
 node server.js
+```
 
 ### 3. Initialize the React Frontend
 Open a separate terminal window at the root project workspace folder:
-
+```bash
 Bash
 cd frontend
 npm install
 npm start
+```
 Your application container canvas will load instantly at http://localhost:3000!
 
 🎯 Submission Context
