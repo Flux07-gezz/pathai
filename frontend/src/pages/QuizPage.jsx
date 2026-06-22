@@ -66,7 +66,7 @@ export default function QuizPage() {
   // ── GENERATE AI QUIZ DIRECTLY FROM THIS PAGE ──
   const handleStartQuizDirectly = async (e) => {
     e.preventDefault();
-    if (!topicInput.trim()) return;
+    if (!topicInput.trim() || loadingQuiz) return;
 
     setLoadingQuiz(true);
     try {
@@ -94,7 +94,18 @@ export default function QuizPage() {
         alert("The AI service returned zero questions. Try another topic.");
       }
     } catch (error) {
-      alert("AI Generation Failed. Please ensure your backend is up and running.");
+      console.error("Quiz Page generation catch block caught:", error);
+      
+      // Check if the backend responded with a 429 Rate Limit status code
+      if (error.response && error.response.status === 429) {
+        alert(error.response.data.message); 
+      } 
+      else if (error.response && error.response.data && error.response.data.message) {
+        alert(error.response.data.message);
+      } 
+      else {
+        alert("AI Generation Failed. Please ensure your backend is up and running.");
+      }
     } finally {
       setLoadingQuiz(false);
     }
@@ -150,7 +161,7 @@ export default function QuizPage() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0f0e2a', fontFamily: "'Inter', sans-serif" }}>
 
-      {/* ── PERSISTENT SIDEBAR ── */}
+      {/* ── SIDEBAR ── */}
       <aside style={{
         width: 220, background: '#13122e', display: 'flex', flexDirection: 'column',
         padding: '28px 0', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 10
@@ -206,10 +217,9 @@ export default function QuizPage() {
         </div>
       </aside>
 
-      {/* ── MAIN CONTENT WORKSPACE AREA ── */}
+      {/* ── MAIN CONTENT WORKSPACE ── */}
       <main style={{ marginLeft: 220, flex: 1, padding: '28px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         
-        {/* ── TOP BAR HEADER ROW (Now spans the full width of the viewport to match Weakness Page) ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40, width: '100%' }}>
           <div>
             <h1 style={{ color: '#fff', fontSize: 22, fontWeight: 700, margin: 0 }}>AI Quiz Workspace 📝</h1>
@@ -233,18 +243,16 @@ export default function QuizPage() {
           </div>
         </div>
 
-        {/* ── CENTRAL WIDGET WRAPPER (Keeps the search card and logs centered and proportional) ── */}
         <div style={{ flex: 1, width: '100%', display: 'flex', justifyContent: 'center' }}>
           
           {questions.length === 0 ? (
             /* CASE 1: EMPTY WORKSPACE */
             <div style={{ maxWidth: '680px', width: '100%' }}>
-              {/* Search Trigger Panel */}
               <div style={{ background: '#1e1d3f', borderRadius: '16px', padding: '24px', border: '1px solid #2d2b5a', marginBottom: '32px' }}>
                 <h3 style={{ color: '#fff', fontSize: '16px', fontWeight: 600, margin: '0 0 14px' }}>Launch a New Practice Quiz</h3>
                 <form onSubmit={handleStartQuizDirectly} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div style={{ background: '#13122e', border: '1.5px solid #2d2b5a', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: '16px' }}>📖</span>
+                    <span>📖</span>
                     <input
                       type="text"
                       value={topicInput}
@@ -258,14 +266,22 @@ export default function QuizPage() {
                   <button 
                     type="submit" 
                     disabled={loadingQuiz || !topicInput.trim()} 
-                    style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #6c63ff, #8b5cf6)', border: 'none', borderRadius: '12px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 20px #6c63ff44' }}
+                    style={{ 
+                      width: '100%', padding: '14px', 
+                      background: 'linear-gradient(135deg, #6c63ff, #8b5cf6)', 
+                      border: 'none', borderRadius: '12px', color: '#fff', 
+                      fontSize: '14px', fontWeight: 700, 
+                      cursor: (loadingQuiz || !topicInput.trim()) ? 'not-allowed' : 'pointer',
+                      opacity: (loadingQuiz || !topicInput.trim()) ? 0.6 : 1,
+                      boxShadow: '0 4px 20px #6c63ff44' 
+                    }}
                   >
-                    {loadingQuiz ? 'Generating AI Exam...' : 'Generate AI Quiz →'}
+                    {loadingQuiz ? 'Generating AI Exam... ⏳' : 'Generate AI Quiz →'}
                   </button>
                 </form>
               </div>
 
-              {/* Recently Solved History Logs Grid Layout */}
+              {/* Recently Solved History Logs */}
               <h3 style={{ color: '#fff', fontSize: '15px', fontWeight: 600, marginBottom: '14px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Recently Solved Logs</h3>
               {loadingHistory ? (
                 <p style={{ color: '#8b8ab0', fontSize: '13px' }}>Loading historical metrics...</p>
@@ -296,7 +312,7 @@ export default function QuizPage() {
               )}
             </div>
           ) : !isSubmitted ? (
-            /* CASE 2: ACTIVE RUNNING EXAM ENGINE */
+            /* CASE 2: ACTIVE EXAM ENGINE */
             <div style={{ maxWidth: '680px', width: '100%', background: '#1e1d3f', borderRadius: '20px', padding: '32px', border: '1px solid #2d2b5a', alignSelf: 'flex-start' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#a78bfa', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', marginBottom: '16px' }}>
                 <span>Active Core Question</span>
@@ -327,7 +343,7 @@ export default function QuizPage() {
               </div>
             </div>
           ) : (
-            /* CASE 3: FINAL ASSESSMENT SUMMARY PANELS */
+            /* CASE 3: FINAL ASSESSMENT SUMMARY */
             <div style={{ maxWidth: '680px', width: '100%', background: '#1e1d3f', borderRadius: '20px', padding: '40px', border: '1px solid #2d2b5a', textAlign: 'center', alignSelf: 'flex-start' }}>
               <div style={{ fontSize: '56px', marginBottom: '16px' }}>{(score / questions.length) * 100 >= 70 ? '🎉' : '📚'}</div>
               <h3 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>Assessment Finalized!</h3>

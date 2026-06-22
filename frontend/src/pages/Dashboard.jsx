@@ -94,9 +94,8 @@ export default function Dashboard() {
     fetchDashboardStats();
   }, [navigate]);
 
-  const handleStartDynamicQuiz = async (e) => {
-    e.preventDefault();
-    if (!topicInput.trim()) return;
+  const handleStartDynamicQuiz = async () => {
+    if (!topicInput.trim() || loadingQuiz) return;
 
     setLoadingQuiz(true);
     try {
@@ -111,29 +110,31 @@ export default function Dashboard() {
         { headers: { Authorization: `Bearer ${cleanToken}` } }
       );
 
-      // 1. Check both possible data key paths safely (.questions or direct array)
+      // Check both possible data key paths safely (.questions or direct array)
       const questionsData = response?.data?.questions || response?.data;
 
-      // 2. Validate that questions data is actually a non-empty array before shifting pages
+      // Validate that questions data is actually a non-empty array before shifting pages
       if (Array.isArray(questionsData) && questionsData.length > 0) {
         console.log("Successfully generated dynamic questions array:", questionsData);
         navigate('/quiz', { state: { questions: questionsData, topic: topicInput } });
       } else {
-        // Fallback for empty/blocked model content generation
         alert("The AI service responded successfully but returned zero questions. Your AI model key might be hitting a token usage limit.");
       }
 
     } catch (error) {
       console.error("Full Quiz Generation Error Log:", error);
       
-      // Pull the precise error text from your backend response framework
-      const backendMessage = error.response?.data?.message || error.response?.data?.error;
-      
-      alert(
-        backendMessage 
-          ? `AI Generation Failed: ${backendMessage}` 
-          : "Could not reach the AI generation service. Check your backend terminal log to see if your API Key is expired, invalid, or rate-limited."
-      );
+      // Check if the backend responded with a 429 Rate Limit status code
+      if (error.response && error.response.status === 429) {
+        alert(error.response.data.message); 
+      } else {
+        const backendMessage = error.response?.data?.message || error.response?.data?.error;
+        alert(
+          backendMessage 
+            ? `AI Generation Failed: ${backendMessage}` 
+            : "Could not reach the AI generation service. Check your backend terminal log to see if your API Key is expired, invalid, or rate-limited."
+        );
+      }
     } finally {
       setLoadingQuiz(false);
     }
@@ -204,7 +205,6 @@ export default function Dashboard() {
       {/* ── MAIN CONTENT ── */}
       <main style={{ marginLeft: 220, flex: 1, padding: '28px', overflowY: 'auto' }}>
 
-        {/* Top bar Layout Row (Fixed CSS typo logic 'justifycontent' -> 'justifyContent') */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
           <div>
             <h1 style={{ color: '#fff', fontSize: 22, fontWeight: 700, margin: 0 }}>
@@ -330,17 +330,16 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ── NCERT UNIVERSAL SEARCH & QUIZ TRIGGER + RECENT QUIZZES ── */}
+        {/* ── NCERT UNIVERSAL SEARCH CONTAINER (Form detached to avoid loop conditions) ── */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.4fr', gap: 16 }}>
 
-          {/* New Universal Search Input Card */}
           <div style={{ background: '#1e1d3f', borderRadius: 16, padding: '20px', border: '1px solid #2d2b5a', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <h3 style={{ color: '#fff', fontSize: 16, fontWeight: 600, margin: '0 0 8px' }}>NCERT Curriculum Practice</h3>
             <p style={{ color: '#8b8ab0', fontSize: 13, marginBottom: 18, lineHeight: '1.4' }}>
               Type in any specific NCERT textbook subject, sub-chapter, or target topic to start practicing and analyze weak areas.
             </p>
 
-            <form onSubmit={handleStartDynamicQuiz} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{
                 background: '#13122e', border: '1.5px solid #2d2b5a', borderRadius: 12,
                 padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10
@@ -361,20 +360,21 @@ export default function Dashboard() {
               </div>
 
               <button 
-                type="submit" 
+                onClick={handleStartDynamicQuiz}
                 disabled={loadingQuiz || !topicInput.trim()} 
                 style={{
                   width: '100%', padding: '14px',
                   background: 'linear-gradient(135deg, #6c63ff, #8b5cf6)',
                   border: 'none', borderRadius: 12, color: '#fff',
-                  fontSize: 14, fontWeight: 700, cursor: topicInput.trim() ? 'pointer' : 'not-allowed',
-                  opacity: topicInput.trim() ? 1 : 0.6,
+                  fontSize: 14, fontWeight: 700, 
+                  cursor: (loadingQuiz || !topicInput.trim()) ? 'not-allowed' : 'pointer',
+                  opacity: (loadingQuiz || !topicInput.trim()) ? 0.6 : 1,
                   boxShadow: '0 4px 20px #6c63ff44', transition: 'all 0.2s'
                 }}
               >
-                {loadingQuiz ? 'Analyzing & Generating Quiz...' : 'Generate AI Quiz →'}
+                {loadingQuiz ? 'Analyzing & Generating Quiz... ⏳' : 'Generate AI Quiz →'}
               </button>
-            </form>
+            </div>
           </div>
 
           {/* Recent Quizzes Table */}
@@ -437,7 +437,6 @@ export default function Dashboard() {
 
         </div>
       </main>
-
     </div>
   );
 }
