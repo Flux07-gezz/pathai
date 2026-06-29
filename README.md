@@ -20,7 +20,7 @@ PathAI is an intelligent, dynamic educational ecosystem built for the **Samsung 
 | **Frontend UI** | React.js (v18), React Router Dom, Axios, Inline Component Styling |
 | **Backend Engine** | Node.js, Express.js, JSON Web Tokens (JWT), Mongoose |
 | **Database Layer** | MongoDB Atlas Cluster Storage |
-| **AI Processing** | Google Gemini API (`gemini-2.0-flash`) |
+| **AI Processing** | Google Gemini API (`gemini-3.5-flash`) |
 
 ---
 
