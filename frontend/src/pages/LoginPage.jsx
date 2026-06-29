@@ -42,7 +42,7 @@ export default function LoginPage() {
     { icon: '🧠', text: 'AI-generated quizzes' },
     { icon: '📊', text: 'Smart weakness detection' },
     { icon: '🗺️', text: 'Personalized roadmaps' },
-    { icon: '📶', text: 'Works offline too' },
+    { icon: '📶', text: 'Resilient to low connectivity' },
   ];
 
   return (
