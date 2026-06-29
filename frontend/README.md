@@ -1,122 +1,70 @@
-# PathAI 🤖 — Adaptive Offline Learning Companion
+# Getting Started with Create React App
 
-> **Samsung Solve for Tomorrow 2026** — AI-powered personalized education for students in low-connectivity environments across India.
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
----
+## Available Scripts
 
-## The Problem
+In the project directory, you can run:
 
-Most AI tutoring tools are generic chatbots. They don't know what *you* struggle with, can't adapt to your level, and stop working the moment your internet drops. For students in Tier 2 and Tier 3 cities — where connectivity is unreliable and personalized tutoring is unaffordable — this means millions of students are left behind.
+### `npm start`
 
----
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-## Our Solution
+The page will reload when you make changes.\
+You may also see any lint errors in the console.
 
-PathAI identifies exactly where each student struggles through quiz-based performance tracking, then uses Google Gemini AI to generate a personalized 7-day study roadmap targeting those specific weak points. The app works offline after first load, supports Hindi and English, and is built for low-connectivity environments.
+### `npm test`
 
----
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-## Key Features
+### `npm run build`
 
-**AI Quiz Engine**
-Generates curriculum-aligned MCQ questions on demand using the Gemini 2.5 Flash API. Questions are saved to MongoDB after first generation — future quizzes load instantly without additional API calls, minimizing quota usage.
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
 
-**Smart Weakness Detection**
-Tracks per-topic scores after every quiz. Topics scoring below 50% are flagged as weak and stored (max 10 active weak topics). When a student retakes a topic and scores above 70%, it is automatically promoted to a strength. Students can also manually mark topics as mastered.
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
 
-**Personalized AI Roadmaps**
-Students select which weak topics to include, then Gemini builds a targeted 7-day study plan with daily activities. Up to 5 active roadmaps at a time — completing one moves it to a persistent archive (last 5 kept). Related subject detection prevents overlapping roadmaps.
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-**Offline-First Architecture**
-Core data is cached in localStorage after first load. The app remains functional with no internet connection after initial setup — critical for our target users.
+### `npm run eject`
 
-**Multilingual Support**
-Full English and Hindi interface toggle via React Context, covering all major UI labels and navigation.
+**Note: this is a one-way operation. Once you `eject`, you can't go back!**
 
-**NCERT-Aligned Dynamic Quizzes**
-Students can set their class level (Class 6–12) and generate topic-specific quizzes anchored to the Indian CBSE/NCERT curriculum.
+If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
----
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
 
-## Tech Stack
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, React Router, Axios, Inline Styles |
-| Backend | Node.js, Express.js, JWT, bcrypt |
-| Database | MongoDB Atlas |
-| AI | Google Gemini 2.5 Flash API |
-| Deployment | Vercel (frontend), Render (backend) |
+## Learn More
 
----
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
-## Local Setup
+To learn React, check out the [React documentation](https://reactjs.org/).
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/Flux07-gezz/pathai.git
-cd pathai
-```
+### Code Splitting
 
-### 2. Backend setup
-```bash
-cd backend
-npm install
-```
+This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
 
-Create a `.env` file inside `backend/`:
-```
-MONGO_URI=your_mongodb_atlas_connection_string
-JWT_SECRET=your_jwt_secret_key
-GEMINI_API_KEY=your_google_gemini_api_key
-PORT=5000
-```
+### Analyzing the Bundle Size
 
-Run the backend:
-```bash
-node server.js
-```
+This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
 
-### 3. Frontend setup
-Open a new terminal:
-```bash
-cd frontend
-npm install
-npm start
-```
+### Making a Progressive Web App
 
-App runs at `http://localhost:3000`
+This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
 
----
+### Advanced Configuration
 
-## Project Structure
+This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
 
-```
-pathai/
-├── backend/
-│   ├── models/          # User, Question, QuizScore, WeakTopic, Roadmap
-│   ├── routes/          # auth, quiz, weakness, roadmap
-│   └── server.js
-└── frontend/
-    └── src/
-        ├── pages/       # Dashboard, QuizPage, WeaknessReport, RoadmapPage
-        ├── components/  # Navbar
-        └── utils/       # api.js, storage.js
-```
+### Deployment
 
----
+This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
 
-## Team
+### `npm run build` fails to minify
 
-| Name | GitHub |
-|---|---|
-| Anshu Raj | [@Flux07-gezz](https://github.com/Flux07-gezz) |
-| Anshika | [@Anshika117](https://github.com/Anshika117) |
-
----
-
-## Submission
-
-**Hackathon:** Samsung Solve for Tomorrow 2026  
-**Status:** Fully functional prototype (Beta v1.0.0)  
-**Theme:** Education — personalized learning for underserved students
+This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
