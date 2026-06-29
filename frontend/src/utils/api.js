@@ -23,4 +23,13 @@ export const submitQuiz = (data) => API.post('/quiz/submit', data);
 export const getWeakTopics = (userId) => API.get(`/quiz/weak/${userId}`);
 
 // Roadmap routes
-export const getRoadmap = (userId) => API.get(`/roadmap/${userId}`);
+export const getRoadmaps = (userId) => API.get(`/roadmap/${userId}`);
+export const generateRoadmap = (data) => API.post('/roadmap/generate', data);
+export const completeRoadmap = (roadmapId) => API.put(`/roadmap/complete/${roadmapId}`);
+
+// Weakness routes
+export const getWeaknessGrouped = (userId) => API.get(`/weakness/${userId}`);
+export const getStrengths = (userId) => API.get(`/weakness/strengths/${userId}`);
+export const markAsStrength = (topicId) => API.put(`/weakness/mark-strength/${topicId}`);
+
+// Update roadmap generate to accept selected topics

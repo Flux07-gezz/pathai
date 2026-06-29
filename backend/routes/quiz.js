@@ -1,20 +1,19 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const Question = require('../models/Question');
 const QuizScore = require('../models/QuizScore');
 const WeakTopic = require('../models/WeakTopic');
-const User = require('../models/User'); // Imported User model to check student class
+const User = require('../models/User');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Custom Authentication Middleware to protect routes and append req.user
+// ── AUTH MIDDLEWARE ──
 const protect = async (req, res, next) => {
   try {
-    const jwt = require('jsonwebtoken');
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'No token, authorization denied' });
-    
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = { id: decoded.userId };
     next();
@@ -23,230 +22,6 @@ const protect = async (req, res, next) => {
   }
 };
 
-// Standard async sleep helper utility function for backoff throttling
-const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Generate questions anchored to the user's specific NCERT grade with automatic 429 exponential backoff retries
-async function generateQuestionsWithGemini(topic, studentClass, count, retries = 3) {
-  const finalCount = parseInt(count) || 5;
-  
-  const model = genAI.getGenerativeModel({ 
-    model: 'gemini-2.0-flash',
-    generationConfig: { responseMimeType: "application/json" }
-  });
-
-  // Unique tokens appended straight to break API caching mechanisms entirely
-  const dynamicSeed = Math.random().toString(36).substring(7);
-  const cacheBusterTimestamp = Date.now();
-
-  const prompt = `
-    You are an expert tutor specialized in the Indian CBSE and NCERT curriculum frameworks.
-    Target Academic Level: ${studentClass}
-    Requested Core Topic/Chapter: "${topic}"
-    Verification Token Vector: ${dynamicSeed}-${cacheBusterTimestamp}
-    
-    CRITICAL GENERATION INSTRUCTIONS:
-    1. You MUST generate exactly ${finalCount} separate, distinct multiple-choice question objects inside the root JSON array. Do not stop at 1 question.
-    2. Every question object must be 100% unique from previous calls. Do not repeat content items.
-    3. Keep questions strictly restricted to the core sub-elements of "${topic}" for ${studentClass}. Do NOT mix random outside subjects.
-
-    Return your output exactly matching this JSON array layout schema. No markdown wrappers, no backtick symbols:
-    [
-      {
-        "question": "A unique question text targeting a specific sub-topic or mathematical formulation under ${topic}",
-        "options": ["Option A", "Option B", "Option C", "Option D"],
-        "answer": "The correct option text value matching exactly one entry from options array above",
-        "topic": "${topic}"
-      }
-    ]
-  `;
-
-  try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    
-    // Safety processing to wipe text block markdown boundaries if present
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-    
-    if (!Array.isArray(parsed)) {
-      return [parsed]; // Wrap inside array matrix to shield map iterators from crashing
-    }
-
-    console.log(`Successfully generated and compiled ${parsed.length} dynamic unique questions for topic: "${topic}"`);
-    return parsed;
-
-  } catch (err) {
-    console.error(`Gemini Error intercepted (Retries left: ${retries}):`, err.message);
-
-    const isRateLimit = err.status === 429 || err.message?.includes('429') || err.message?.includes('Quota exceeded');
-
-    if (isRateLimit && retries > 0) {
-      let delayMs = 6000; 
-      if (err.errorDetails?.[0]?.retryDelay) {
-        const extractedSeconds = parseInt(err.errorDetails[0].retryDelay);
-        if (!isNaN(extractedSeconds)) delayMs = extractedSeconds * 1000;
-      } else {
-        delayMs = 6000 * (4 - retries);
-      }
-
-      console.warn(`⏳ Rate limited! Automatically retrying in ${delayMs / 1000} seconds...`);
-      await wait(delayMs);
-      return generateQuestionsWithGemini(topic, studentClass, finalCount, retries - 1);
-    }
-
-    // ⚡ EMERGENCY HACKATHON SHIELD: If Google is fully locked out, return seamless mock questions
-    if (isRateLimit) {
-      console.warn("⚠️ Google Tier fully locked out! Deploying emergency Mock Data Shield for judges.");
-      
-      return [
-        {
-          "question": `Which of the following processes is primary in the study of ${topic || 'this curriculum topic'}?`,
-          "options": ["Conceptual Definition Synthesis", "Empirical Observation Mapping", "Systematic Variable Isolation", "Theoretical Framework Application"],
-          "answer": "Conceptual Definition Synthesis",
-          "topic": `${topic}`
-        },
-        {
-          "question": `What is the primary textbook definition constraint regarding ${topic || 'the active chapter study area'}?`,
-          "options": ["Proportional structural changes", "Constant baseline monitoring", "Symmetric distribution anomalies", "Inversely correlated equilibrium metrics"],
-          "answer": "Constant baseline monitoring",
-          "topic": `${topic}`
-        },
-        {
-          "question": `Under NCERT guidelines, analyzing an active core system like ${topic || 'this element'} requires validating which core principle?`,
-          "options": ["The Principle of Mass Conservation", "The Law of Structural Connectivity", "The Dynamic Equilibrium Matrix Criterion", "The Linear Superposition Axiom"],
-          "answer": "The Dynamic Equilibrium Matrix Criterion",
-          "topic": `${topic}`
-        },
-        {
-          "question": `Which sub-element directly correlates with expected performance metrics in ${topic || 'this module'}?`,
-          "options": ["Independent Variable Variation", "Dependent Output Tracking", "Stochastic Distribution Buffers", "Fixed Control Parameterization"],
-          "answer": "Fixed Control Parameterization",
-          "topic": `${topic}`
-        },
-        {
-          "question": `What is the fundamental conclusion derived from standard textbook practices concerning ${topic || 'this chapter topic'}?`,
-          "options": ["Systemic optimization increases entropy.", "Regulated connectivity scales quadratically.", "All values maintain steady state distribution criteria.", "Bounded parameters ensure uniform predictability patterns."],
-          "answer": "All values maintain steady state distribution criteria.",
-          "topic": `${topic}`
-        }
-      ];
-    }
-
-    throw err;
-  }
-}
-
-// Get weak topics
-router.get('/weak/:userId', async (req, res) => {
-  try {
-    const weakTopics = await WeakTopic.find({
-      userId: req.params.userId,
-      isWeak: true
-    });
-    res.json(weakTopics);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// NEW POST ROUTE: Universal NCERT Search Engine Endpoint
-router.post('/generate-dynamic', protect, async (req, res) => {
-  try {
-    const { topic } = req.body;
-    if (!topic) {
-      return res.status(400).json({ message: 'Please provide a topic or chapter to study' });
-    }
-
-    const TOTAL_QUESTIONS = 5; 
-
-    // 1. Discover the student's anchor class profile
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User profile not found' });
-    
-    const studentClass = user.studentClass || 'Class 10'; 
-
-    console.log(`Processing NCERT Query: "${topic}" for level: ${studentClass}`);
-
-    // 2. Query Gemini directly for dynamic customized items
-    const generated = await generateQuestionsWithGemini(topic, studentClass, TOTAL_QUESTIONS);
-
-    // Safety check: If generated is missing or not an array, create an instant fallback array
-    const questionsArray = Array.isArray(generated) ? generated : [];
-
-    // 3. Map keys to match EXACTLY what your QuizPage.jsx uses!
-    const toSave = questionsArray.map((q, idx) => {
-      // Handle fallback strings gracefully if a field is missing
-      const questionTextString = q.question || q.questionText || `Sample question regarding ${topic}`;
-      const optionsArray = Array.isArray(q.options) ? q.options : ["Option A", "Option B", "Option C", "Option D"];
-      const correctOptionString = q.answer || q.correctAnswer || optionsArray[0];
-
-      // Find the correct index position of the answer string inside the options array
-      const correctIdx = optionsArray.indexOf(correctOptionString);
-      
-      return {
-        questionText: questionTextString,                     // ✅ Matches frontend currentQuestion.questionText
-        options: optionsArray,                               // ✅ Matches frontend currentQuestion.options
-        correctOptionIndex: correctIdx >= 0 ? correctIdx : 0, // ✅ Matches frontend q.correctOptionIndex
-        topic: q.topic || topic,
-        subject: studentClass, 
-        difficulty: 'Dynamic-NCERT',
-        aiGenerated: true
-      };
-    });
-
-    // 4. CRITICAL: Wrap the array inside an object with a 'questions' key and send it!
-    return res.json({ questions: toSave });
-
-  } catch (err) {
-    console.error("Backend Quiz Generation Route Handler Failure:", err);
-
-    // If it's a rate limit error that didn't get caught by the function, handle it here
-    if (err.isRateLimit || err.status === 429) {
-      return res.status(429).json({
-        message: "AI engine is cooling down. Free tier quota limits reached. Please wait 30 seconds and try again! ⏳"
-      });
-    }
-
-    return res.status(500).json({ 
-      message: 'Server error generating dynamic AI quiz', 
-      error: err.message 
-    });
-  }
-});
-
-// Submit quiz results
-router.post('/submit', async (req, res) => {
-  try {
-    const { userId, subject, topicScores, totalScore } = req.body;
-
-    const quizScore = new QuizScore({
-      userId,
-      subject,
-      topicScores,
-      totalScore
-    });
-    await quizScore.save();
-
-    for (let topic in topicScores) {
-      const score = topicScores[topic];
-      await WeakTopic.findOneAndUpdate(
-        { userId, topic },
-        { userId, subject, topic, score, isWeak: score < 60 },
-        { upsert: true, new: true }
-      );
-    }
-
-    res.json({ message: 'Quiz submitted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-const Progress = require('../models/Progress'); 
-const jwt = require('jsonwebtoken');
-
-// Simple verification middleware if not already present in your quiz routes file
 const protectRoute = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
@@ -258,62 +33,280 @@ const protectRoute = async (req, res, next) => {
   }
 };
 
-// POST /api/quiz/save-score
+// ── SLEEP HELPER ──
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// ── GEMINI QUESTION GENERATOR (NCERT aware + retry + fallback) ──
+async function generateQuestionsWithGemini(topic, studentClass, count, retries = 3) {
+  const finalCount = parseInt(count) || 5;
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-3.5-flash',
+    generationConfig: { responseMimeType: 'application/json' }
+  });
+
+  const dynamicSeed = Math.random().toString(36).substring(7);
+  const cacheBusterTimestamp = Date.now();
+
+  const prompt = `
+    You are an expert tutor specialized in the Indian CBSE and NCERT curriculum frameworks.
+    Target Academic Level: ${studentClass}
+    Requested Core Topic/Chapter: "${topic}"
+    Verification Token: ${dynamicSeed}-${cacheBusterTimestamp}
+
+    CRITICAL INSTRUCTIONS:
+    1. Generate exactly ${finalCount} distinct multiple-choice question objects inside a root JSON array.
+    2. Every question must be 100% unique.
+    3. Keep questions strictly about "${topic}" for ${studentClass}.
+
+    Return ONLY this JSON array, no markdown, no backticks:
+    [
+      {
+        "question": "A unique question text",
+        "options": ["Option A", "Option B", "Option C", "Option D"],
+        "answer": "The correct option text matching exactly one entry from options",
+        "topic": "${topic}"
+      }
+    ]
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    const arr = Array.isArray(parsed) ? parsed : [parsed];
+    console.log(`Generated ${arr.length} questions for topic: "${topic}"`);
+    return arr;
+
+  } catch (err) {
+    console.error(`Gemini Error (Retries left: ${retries}):`, err.message);
+
+    const isRateLimit = err.status === 429 || err.message?.includes('429') || err.message?.includes('Quota exceeded');
+
+    if (isRateLimit && retries > 0) {
+      let delayMs = 6000 * (4 - retries);
+      if (err.errorDetails?.[0]?.retryDelay) {
+        const s = parseInt(err.errorDetails[0].retryDelay);
+        if (!isNaN(s)) delayMs = s * 1000;
+      }
+      console.warn(`Rate limited! Retrying in ${delayMs / 1000}s...`);
+      await wait(delayMs);
+      return generateQuestionsWithGemini(topic, studentClass, finalCount, retries - 1);
+    }
+
+    if (isRateLimit) {
+      console.warn('Quota fully locked — deploying fallback questions.');
+      return Array.from({ length: finalCount }, (_, i) => ({
+        question: `Sample question ${i + 1} about ${topic}`,
+        options: ['Option A', 'Option B', 'Option C', 'Option D'],
+        answer: 'Option A',
+        topic
+      }));
+    }
+
+    throw err;
+  }
+}
+
+// ── SAVE WEAK TOPIC HELPER (with 10-topic limit + strength detection) ──
+async function saveWeakTopic(userId, subject, topic, score) {
+  const isStrength = score >= 70;
+  const isWeak = score < 50;
+
+  // Check if topic already exists
+  const existing = await WeakTopic.findOne({ userId, subject, topic });
+
+  if (existing) {
+    // Update score and status
+    await WeakTopic.findOneAndUpdate(
+      { userId, subject, topic },
+      {
+        score,
+        isWeak: isStrength ? false : isWeak,
+        isStrength
+      }
+    );
+    return { saved: true, reason: 'updated' };
+  }
+
+  // Only save new entry if it's weak
+  if (!isWeak) return { saved: false, reason: 'not_weak' };
+
+  // Check 10 topic limit
+  const weakCount = await WeakTopic.countDocuments({
+    userId,
+    isWeak: true,
+    isStrength: false
+  });
+
+  if (weakCount >= 10) {
+    return { saved: false, reason: 'limit_reached' };
+  }
+
+  await WeakTopic.create({ userId, subject, topic, score, isWeak: true, isStrength: false });
+  return { saved: true, reason: 'created' };
+}
+
+// ══════════════════════════════════════════
+// ROUTES
+// ══════════════════════════════════════════
+
+// GET weak topics (legacy route — kept for backward compat)
+router.get('/weak/:userId', async (req, res) => {
+  try {
+    const weakTopics = await WeakTopic.find({
+      userId: req.params.userId,
+      isWeak: true,
+      isStrength: false
+    });
+    res.json(weakTopics);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// GET questions by subject + difficulty (mix of saved + AI generated)
+router.get('/:subject/:difficulty', async (req, res) => {
+  try {
+    const { subject, difficulty } = req.params;
+    const TOTAL = 10;
+
+    const saved = await Question.find({ subject, difficulty }).limit(TOTAL);
+    let questions = [...saved];
+
+    if (saved.length < TOTAL) {
+      const needed = TOTAL - saved.length;
+      console.log(`Generating ${needed} questions with Gemini...`);
+
+      try {
+        const generated = await generateQuestionsWithGemini(subject, 'Class 10', needed);
+        const toSave = generated.map(q => ({
+          question: q.question,
+          options: q.options,
+          answer: q.answer,
+          topic: q.topic || subject,
+          subject,
+          difficulty,
+          aiGenerated: true
+        }));
+        const saved2 = await Question.insertMany(toSave);
+        questions = [...questions, ...saved2];
+      } catch (geminiErr) {
+        console.log('Gemini failed:', geminiErr.message);
+        if (questions.length === 0) {
+          return res.status(503).json({ message: 'Could not generate questions. Please try again.' });
+        }
+      }
+    }
+
+    questions = questions.sort(() => Math.random() - 0.5);
+    res.json(questions);
+
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// POST dynamic NCERT quiz generation
+router.post('/generate-dynamic', protect, async (req, res) => {
+  try {
+    const { topic } = req.body;
+    if (!topic) return res.status(400).json({ message: 'Please provide a topic' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const studentClass = user.studentClass || 'Class 10';
+    console.log(`Processing NCERT Query: "${topic}" for level: ${studentClass}`);
+
+    const generated = await generateQuestionsWithGemini(topic, studentClass, 5);
+    const questionsArray = Array.isArray(generated) ? generated : [];
+
+    const toSave = questionsArray.map(q => {
+      const questionText = q.question || `Sample question about ${topic}`;
+      const options = Array.isArray(q.options) ? q.options : ['A', 'B', 'C', 'D'];
+      const answer = q.answer || options[0];
+      const correctIdx = options.indexOf(answer);
+      return {
+        questionText,
+        options,
+        correctOptionIndex: correctIdx >= 0 ? correctIdx : 0,
+        topic: q.topic || topic,
+        subject: studentClass,
+        difficulty: 'Dynamic-NCERT',
+        aiGenerated: true
+      };
+    });
+
+    return res.json({ questions: toSave });
+
+  } catch (err) {
+    console.error('Backend Quiz Generation Failure:', err);
+    if (err.status === 429) {
+      return res.status(429).json({ message: 'AI quota reached. Please wait and try again.' });
+    }
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+// POST submit quiz results (with 10-topic limit + strength detection)
+router.post('/submit', async (req, res) => {
+  try {
+    const { userId, subject, topicScores, totalScore } = req.body;
+
+    // Save quiz score
+    const quizScore = new QuizScore({ userId, subject, topicScores, totalScore });
+    await quizScore.save();
+
+    // Track weak topics with limit
+    const limitReachedTopics = [];
+
+    for (let topic in topicScores) {
+      const score = topicScores[topic];
+      const result = await saveWeakTopic(userId, subject, topic, score);
+
+      if (result.reason === 'limit_reached') {
+        limitReachedTopics.push(topic);
+      }
+    }
+
+    if (limitReachedTopics.length > 0) {
+      return res.json({
+        message: 'Quiz submitted!',
+        warning: `You already have 10 weak topics stored. Work on your existing weak topics first before new ones can be tracked! Topics not saved: ${limitReachedTopics.join(', ')}`,
+        limitReached: true
+      });
+    }
+
+    res.json({ message: 'Quiz submitted successfully!' });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// POST save score (teammate's route)
 router.post('/save-score', protectRoute, async (req, res) => {
   try {
     const { topicName, score, totalQuestions } = req.body;
     const percentage = (score / totalQuestions) * 100;
-    const isWeakArea = percentage < 70;
-
-    let profile = await Progress.findOne({ userId: req.userId });
-    if (!profile) {
-      profile = new Progress({ userId: req.userId });
-    }
-
-    profile.quizzesTaken.push({
-      topicName,
-      score,
-      totalQuestions
-    });
-
-    if (isWeakArea && !profile.weakTopics.includes(topicName)) {
-      profile.weakTopics.push(topicName);
-    } 
-    else if (!isWeakArea && profile.weakTopics.includes(topicName)) {
-      profile.weakTopics = profile.weakTopics.filter(t => t !== topicName);
-    }
-
-    await profile.save();
-    res.json({ message: 'Session scores recorded successfully!', profile });
+    await saveWeakTopic(req.userId, 'General', topicName, percentage);
+    res.json({ message: 'Score recorded successfully!' });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to record quiz results data frame', error: error.message });
+    res.status(500).json({ message: 'Failed to record quiz results', error: error.message });
   }
 });
 
-// GET /api/quiz/history
+// GET quiz history
 router.get('/history', protect, async (req, res) => {
   try {
-    const profile = await Progress.findOne({ userId: req.user.id });
-    if (!profile) {
-      return res.json({ quizzesTaken: [] });
-    }
-    const history = profile.quizzesTaken.slice(-5).reverse();
-    res.json({ quizzesTaken: history });
+    const scores = await QuizScore.find({ userId: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(5);
+    res.json({ quizzesTaken: scores });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch quiz history', error: error.message });
-  }
-});
-
-// POST: Wipe History and Reset Weakness Metrics
-router.post('/clear-history', async (req, res) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    await Progress.findOneAndDelete({ userId: decoded.userId });
-    res.json({ success: true, message: 'Data tracker flushed cleanly.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error clearing database matrices' });
   }
 });
 

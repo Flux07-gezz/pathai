@@ -7,7 +7,7 @@ const weakTopicSchema = new mongoose.Schema({
     required: true
   },
   subject: {
-    type: String, // Tracks the NCERT class level or broad field
+    type: String,
     required: true
   },
   topic: {
@@ -20,13 +20,18 @@ const weakTopicSchema = new mongoose.Schema({
   },
   isWeak: {
     type: Boolean,
+    default: true
+  },
+  isStrength: {
+    type: Boolean,
+    default: false
+  },
+  markedStrengthManually: {
+    type: Boolean,
     default: false
   }
 }, {
   timestamps: true
 });
-
-// Ensures a student has exactly one record per topic/subtopic to prevent DB clutter
-weakTopicSchema.index({ userId: 1, topic: 1 }, { unique: true });
 
 module.exports = mongoose.model('WeakTopic', weakTopicSchema);

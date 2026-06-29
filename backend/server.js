@@ -21,6 +21,9 @@ mongoose.connect(process.env.MONGO_URI, {
   .catch((err) => console.log('MongoDB connection error:', err.message));
 
 // Routes
+const weaknessRoutes = require('./routes/weakness');
+app.use('/api/weakness', weaknessRoutes);
+
 const dashboardRoutes = require('./routes/dashboard');
 app.use('/api/dashboard', dashboardRoutes);
 
