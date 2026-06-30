@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getUser, saveUser } from '../utils/storage';
-import API from '../utils/api';
+import { updateOnboardingClass } from '../utils/api';
 
 
 export default function Onboarding() {
@@ -48,15 +48,7 @@ export default function Onboarding() {
         : rawToken;
 
       // Send the selection to your backend route directly
-      const response = await API.put(
-        '/auth/update-class', 
-        { studentClass: selectedClass }, 
-        { 
-          headers: { 
-            'Content-Type': 'application/json'
-          } 
-        }
-      );
+      const response = await updateOnboardingClass({ studentClass: selectedClass });
       
 
       // Fetch current local user state frame
