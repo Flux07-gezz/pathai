@@ -7,7 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid
 } from 'recharts';
-import {API} from '../utils/api';
+import API from '../utils/api';
 
 const studyData = [
   { day: 'S', hours: 1 },

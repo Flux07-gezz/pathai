@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getUser, saveUser } from '../utils/storage';
-import {API} from '../utils/api';
+import API from '../utils/api';
 
 
 export default function Onboarding() {

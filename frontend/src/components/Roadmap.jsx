@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getUser } from '../utils/storage';
-import {API} from '../utils/api';
+import API from '../utils/api';
 
 const navItems = [
   { label: 'Dashboard', icon: '⊞', path: '/dashboard' },
