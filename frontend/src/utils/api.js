@@ -34,3 +34,5 @@ export const getStrengths = (userId) => API.get(`/weakness/strengths/${userId}`)
 export const markAsStrength = (topicId) => API.put(`/weakness/mark-strength/${topicId}`);
 
 // Update roadmap generate to accept selected topics
+
+export default API;
