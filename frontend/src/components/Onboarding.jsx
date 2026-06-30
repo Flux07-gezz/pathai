@@ -46,12 +46,11 @@ export default function Onboarding() {
         : rawToken;
 
       // Send the selection to your backend route directly
-      const response = await axios.put(
-        'http://localhost:5000/api/auth/update-class', 
+      const response = await API.put(
+        '/auth/update-class', 
         { studentClass: selectedClass }, 
         { 
           headers: { 
-            'Authorization': `Bearer ${cleanToken}`, 
             'Content-Type': 'application/json'
           } 
         }
