@@ -48,6 +48,8 @@ export default function Onboarding() {
         : rawToken;
 
       // Send the selection to your backend route directly
+      console.log('Token before update-class:', localStorage.getItem('token'));
+      await updateOnboardingClass({ studentClass });
       const response = await updateOnboardingClass({ studentClass: selectedClass });
       
 
