@@ -7,8 +7,12 @@ const API = axios.create({
 
 // Automatically add token to every request
 API.interceptors.request.use((req) => {
-  const token = localStorage.getItem('token');
-  if (token) {
+  const raw = localStorage.getItem('token');
+  if (raw) {
+    // Remove surrounding quotes if present
+    const token = raw.startsWith('"') && raw.endsWith('"') 
+      ? JSON.parse(raw) 
+      : raw;
     req.headers.Authorization = `Bearer ${token}`;
   }
   return req;
