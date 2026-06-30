@@ -33,9 +33,9 @@ export default function WeaknessReport() {
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
     fetchData();
-  }, []);
+  }, [fetchData]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const token = getToken();
       const [weakRes, strengthRes] = await Promise.all([
@@ -54,7 +54,7 @@ export default function WeaknessReport() {
     } finally {
       setLoading(false);
     }
-  };
+  });
 
   const handleMarkStrength = async (topicId, topicName) => {
     setMarkingStrength(topicId);

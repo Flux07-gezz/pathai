@@ -23,7 +23,7 @@ export default function QuizPage() {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
-  const [activePath, setActivePath] = useState('/quiz');
+  const [activePath] = useState('/quiz');
 
   // Search & Loading States
   const [topicInput, setTopicInput] = useState('');

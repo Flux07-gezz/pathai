@@ -32,9 +32,9 @@ export default function RoadmapPage() {
   useEffect(() => {
     if (!user) { navigate('/login'); return; }
     fetchRoadmaps();
-  }, []);
+  }, [fetchRoadmaps]);
 
-  const fetchRoadmaps = async () => {
+  const fetchRoadmaps = useCallback( async () => {
     try {
       const res = await getRoadmaps(user.id);
       setActiveRoadmaps(res.data.activeRoadmaps);
@@ -44,7 +44,7 @@ export default function RoadmapPage() {
       setError('Failed to load roadmaps');
       setLoading(false);
     }
-  };
+  });
 
   const handleGenerate = async () => {
     setGenerating(true);
