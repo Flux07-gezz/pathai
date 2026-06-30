@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API = axios.create({
   // Looks for Vercel's environment variable first; falls back to localhost if running locally
-  baseURL: import.meta.env.REACT_APP_API_URL || 'http://localhost:5000/api'
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 });
 
 // Automatically add token to every request
