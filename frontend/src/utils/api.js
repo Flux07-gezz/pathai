@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const API = axios.create({
-  // Looks for Vercel's environment variable first; falls back to localhost if running locally
-  baseURL: import.meta.env.REACT_APP_API_URL || 'http://localhost:5000/api'
+  // Force clean Create React App configuration syntax
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api'
 });
 
 // Automatically add token to every request
@@ -14,7 +14,7 @@ API.interceptors.request.use((req) => {
   return req;
 });
 
-// Auth routes
+// Target routes used by your components
 export const register = (data) => API.post('/auth/register', data);
 export const login = (data) => API.post('/auth/login', data);
 
@@ -32,7 +32,5 @@ export const completeRoadmap = (roadmapId) => API.put(`/roadmap/complete/${roadm
 export const getWeaknessGrouped = (userId) => API.get(`/weakness/${userId}`);
 export const getStrengths = (userId) => API.get(`/weakness/strengths/${userId}`);
 export const markAsStrength = (topicId) => API.put(`/weakness/mark-strength/${topicId}`);
-
-// Update roadmap generate to accept selected topics
 
 export default API;
