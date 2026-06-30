@@ -7,6 +7,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid
 } from 'recharts';
+import {API} from '../utils/api';
 
 const studyData = [
   { day: 'S', hours: 1 },
@@ -79,9 +80,7 @@ export default function Dashboard() {
           ? JSON.parse(rawToken)
           : rawToken;
 
-        const response = await axios.get('http://localhost:5000/api/dashboard/stats', {
-          headers: { Authorization: `Bearer ${cleanToken}` }
-        });
+        const response = await API.get('/dashboard/stats');
 
         setStats(response.data);
       } catch (err) {
@@ -104,11 +103,7 @@ export default function Dashboard() {
         ? JSON.parse(rawToken)
         : rawToken;
 
-      const response = await axios.post(
-        'http://localhost:5000/api/quiz/generate-dynamic',
-        { topic: topicInput },
-        { headers: { Authorization: `Bearer ${cleanToken}` } }
-      );
+      const response = await API.post('/quiz/generate-dynamic', { topic: topicInput });
 
       // Check both possible data key paths safely (.questions or direct array)
       const questionsData = response?.data?.questions || response?.data;

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getUser, saveUser } from '../utils/storage';
+import {API} from '../utils/api';
+
 
 export default function Onboarding() {
   const [selectedClass, setSelectedClass] = useState('');
@@ -55,6 +57,7 @@ export default function Onboarding() {
           } 
         }
       );
+      
 
       // Fetch current local user state frame
       const currentUser = getUser();

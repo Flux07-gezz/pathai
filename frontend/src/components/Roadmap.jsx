@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getUser } from '../utils/storage';
+import {API} from '../utils/api';
 
 const navItems = [
   { label: 'Dashboard', icon: '⊞', path: '/dashboard' },
@@ -37,9 +38,7 @@ export default function Roadmap() {
             : rawToken;
     
           // ✅ ONLY ONE FETCH CALL: No more calling the broken /api/auth/stats route!
-          const response = await axios.get('http://localhost:5000/api/roadmap', {
-            headers: { Authorization: `Bearer ${cleanToken}` }
-          });
+          const response = await API.get('/roadmap');
     
           if (response.data.roadmap) {
             setRoadmap(response.data.roadmap);

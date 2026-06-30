@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getUser } from '../utils/storage';
+import {API} from '../utils/api';
 
 const navItems = [
   { label: 'Dashboard', icon: '⊞', path: '/dashboard' },
@@ -39,12 +40,8 @@ export default function WeaknessReport() {
     try {
       const token = getToken();
       const [weakRes, strengthRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/weakness/${user.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`http://localhost:5000/api/weakness/strengths/${user.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        API.get(`/weakness/${user.id}`),
+        API.get(`/weakness/strengths/${user.id}`)
       ]);
       setGrouped(weakRes.data.grouped || {});
       setTotalWeak(weakRes.data.totalWeak || 0);
@@ -60,9 +57,7 @@ export default function WeaknessReport() {
     setMarkingStrength(topicId);
     try {
       const token = getToken();
-      await axios.put(`http://localhost:5000/api/weakness/mark-strength/${topicId}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await API.put(`/weakness/mark-strength/${topicId}`, {});
       fetchData();
     } catch (err) {
       console.error('Failed to mark as strength:', err);
@@ -75,11 +70,7 @@ export default function WeaknessReport() {
     setGeneratingQuiz(topicName);
     try {
       const token = getToken();
-      const response = await axios.post(
-        'http://localhost:5000/api/quiz/generate-dynamic',
-        { topic: topicName },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await API.post('/quiz/generate-dynamic', { topic: topicName });
       const questionsData = response?.data?.questions || response?.data;
       if (Array.isArray(questionsData) && questionsData.length > 0) {
         navigate('/quiz', { state: { questions: questionsData, topic: topicName } });

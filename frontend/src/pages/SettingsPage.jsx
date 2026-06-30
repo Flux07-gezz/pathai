@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getUser, saveToLocal } from '../utils/storage';
+import {API} from '../utils/api';
 
 const navItems = [
   { label: 'Dashboard', icon: '⊞', path: '/dashboard' },
@@ -37,10 +38,7 @@ export default function SettingsPage() {
       const cleanToken = rawToken.startsWith('"') && rawToken.endsWith('"') ? JSON.parse(rawToken) : rawToken;
 
       // Make a call to update user profile details
-      await axios.post('http://localhost:5000/api/auth/update-profile', 
-        { studentClass: selectedClass },
-        { headers: { Authorization: `Bearer ${cleanToken}` } }
-      );
+      await API.post('/auth/update-profile', { studentClass: selectedClass });
 
       // Update local storage object so header updates instantly without relogging
       const updatedUser = { ...user, studentClass: selectedClass };
@@ -63,9 +61,7 @@ export default function SettingsPage() {
       const rawToken = localStorage.getItem('token');
       const cleanToken = rawToken.startsWith('"') && rawToken.endsWith('"') ? JSON.parse(rawToken) : rawToken;
 
-      await axios.post('http://localhost:5000/api/quiz/clear-history', {}, {
-        headers: { Authorization: `Bearer ${cleanToken}` }
-      });
+      await API.post('/quiz/clear-history', {});
 
       alert("Workspace parameters flushed successfully.");
     } catch (err) {

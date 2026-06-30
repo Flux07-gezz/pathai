@@ -5,8 +5,6 @@ import { saveUser } from '../utils/storage';
 import { useLang } from '../LanguageContext';
 
 export default function LoginPage() {
-  console.log("CRITICAL CHECK - VERCEL SEES THE URL AS:", process.env.REACT_APP_API_URL);
-
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');

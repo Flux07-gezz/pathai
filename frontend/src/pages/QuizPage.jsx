@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getUser } from '../utils/storage';
+import {API} from '../utils/api';
 
 const navItems = [
   { label: 'Dashboard', icon: '⊞', path: '/dashboard' },
@@ -49,9 +50,7 @@ export default function QuizPage() {
             ? JSON.parse(rawToken)
             : rawToken;
 
-          const res = await axios.get('http://localhost:5000/api/quiz/history', {
-            headers: { Authorization: `Bearer ${cleanToken}` }
-          });
+          const res = await API.get('/quiz/history');
           setHistory(res.data.quizzesTaken || []);
         } catch (err) {
           console.error("Failed to load quiz history profiles:", err);
@@ -75,11 +74,7 @@ export default function QuizPage() {
         ? JSON.parse(rawToken)
         : rawToken;
 
-      const response = await axios.post(
-        'http://localhost:5000/api/quiz/generate-dynamic',
-        { topic: topicInput },
-        { headers: { Authorization: `Bearer ${cleanToken}` } }
-      );
+      const response = await API.post('/quiz/generate-dynamic', { topic: topicInput });
 
       const questionsData = response?.data?.questions || response?.data;
 
@@ -136,12 +131,10 @@ export default function QuizPage() {
         ? JSON.parse(rawToken)
         : rawToken;
 
-      await axios.post('http://localhost:5000/api/quiz/save-score', {
+      await API.post('/quiz/save-score', {
         topicName: topicName,
         score: calculatedScore,
         totalQuestions: questions.length
-      }, {
-        headers: { Authorization: `Bearer ${cleanToken}` }
       });
     } catch (err) {
       console.error("Score saved locally, failed to update backend cluster metrics:", err);
